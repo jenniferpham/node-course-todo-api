@@ -24,6 +24,14 @@ app.post('/todos', (request, response) => {
     })
 })
 
+app.get('/todos', (req, res) => {
+    Todo.find().then( (todos) => {
+        res.send({todos}) //seding object is much more flexible
+    }, (e) => {
+        res.status(400).send(e)
+    })
+})
+
 app.listen(port, () => {
     console.log('starting app on ', port)
 })
