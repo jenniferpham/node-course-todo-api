@@ -56,6 +56,33 @@ app.get('/todos/:id', (req, res)=>{
     })
 })
 
+app.delete('/todos/:id', (req, res) => {
+    //get the id
+
+    //validate the id --> not valid? return 404. (it will still be successful if it doesn't remove but it just returns a null response)
+    
+    //remove todo by id
+        //success
+            //if no doc, send 404
+            //if doc, send doc back with 200
+        //error
+            //400 with empty body
+
+    var id = req.params.id;
+    if (!ObjectID.isValid){  //if ID is not valid
+        return res.status(404).send({});
+    }
+
+    Todo.findOneAndRemove({_id: id}).then( (result)=> {
+        if(!result){
+            return res.status(404).send({})
+        } else{
+            return res.status(200).send({todo: result})
+        }
+
+    }).catch( (err) => res.status(400).send({error: err})  )
+})
+
 app.listen(port, () => {
     console.log('starting app on ', port)
 })
