@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
-const JWT = require('jsonwebtoken');
-const _ = require('lodash';)
+const jwt = require('jsonwebtoken');
+const _ = require('lodash');
 
 var UserSchema = new mongoose.Schema({
     email: {
@@ -51,6 +51,27 @@ UserSchema.methods.generateAuthToken = function(){  //usees this type of functio
 
     return user.save().then( () => {
         return token; //gives ou the token only after user is saved
+    })
+};
+
+//statics holds model methods
+UserSchema.statics.findByToken = function (token) {
+    var User = this;  //this is model unlike other method which is instance method
+    var decoded;
+    
+    try{  //any errors and it will go into catch block
+        decoded = jwt.verify(token, 'abc123');
+    } catch(e){
+        // return new Promise( (resolve, reject)=> {
+        //     reject();
+        // })
+        return Promise.reject();
+    }
+
+    return User.findOne({
+        '_id': decoded._id,
+        'tokens.token': token,  //quotes are required when there is a dot in the value
+        'tokens.access': 'auth'
     })
 };
 

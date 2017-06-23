@@ -20,6 +20,7 @@ const {ObjectID} = require('mongodb');
 const {mongoose} = require ('./db/mongoose'); //can leave of .js extension. creates a mongoose variable same as variable from the file required
 var {Todo} = require('./models/todo');
 var {User} = require('./models/user');
+const {authenticate} = require('./middleware/authenticate');
 
 var app = express();
 const port = process.env.PORT || 3000;
@@ -143,6 +144,12 @@ app.post('/users', (req, res) => {
         return res.status(400).send({err: err})
     })
 
+})
+    
+
+//make private route
+app.get('/users/me', authenticate, (req, res) => {
+    res.send(req.user);
 })
 
 app.listen(port, () => {
