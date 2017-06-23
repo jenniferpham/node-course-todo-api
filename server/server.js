@@ -121,6 +121,30 @@ app.patch('/todos/:id', (req, res)=> {
     });
 });
 
+//POST Users - use pick for what they can edit
+app.post('/users', (req, res) => {
+
+    var body = _.pick(req.body, ['email', 'password']); //select which properties users can update/edit. don't want them updating program-generated IDs
+
+    //create new user
+    var user = new User(body);
+
+    //save new user (made from req.body onto db
+    user.save().then( () => {
+        // if(!result){
+        //     return res.status(404).send({err: 'did not post. no result returned'});
+        // }
+        // return res.status(200).send({user: result})
+
+        return user.generateAuthToken();
+    }).then( (token) => {
+        res.header('x-auth', token).status(200).send({user: user});  //create custom  header to store teh value
+    }).catch( (err)=> {
+        return res.status(400).send({err: err})
+    })
+
+})
+
 app.listen(port, () => {
     console.log('starting app on ', port)
 })
