@@ -15,6 +15,7 @@ const _ = require('lodash');
 const express = require('express');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
+const bcrypt = require('bcryptjs');
 
 //INTERNAL
 const {mongoose} = require ('./db/mongoose'); //can leave of .js extension. creates a mongoose variable same as variable from the file required
@@ -123,29 +124,84 @@ app.patch('/todos/:id', (req, res)=> {
 });
 
 //POST Users - use pick for what they can edit
+//add new user who gives an x-auth on response.headers
+// app.post('/users', (req, res) => {
+
+//     var body = _.pick(req.body, ['email', 'password']); //select which properties users can update/edit. don't want them updating program-generated IDs
+
+//     //create new user
+//     var user = new User(body);
+
+//     //save new user (made from req.body onto db
+//     user.save().then( () => {
+//         // if(!result){
+//         //     return res.status(404).send({err: 'did not post. no result returned'});
+//         // }
+//         // return res.status(200).send({user: result})
+
+//         let token = user.generateAuthToken();
+//         return token;
+//     }).then( (token) => {
+//         res.header('x-auth', token).status(200).send(user);  //create custom  header to store teh value
+//     }).catch( (err)=> {
+//         res.status(400).send(err)
+//     })
+//})
+
 app.post('/users', (req, res) => {
+  var body = _.pick(req.body, ['email', 'password']);
+  var user = new User(body);
 
-    var body = _.pick(req.body, ['email', 'password']); //select which properties users can update/edit. don't want them updating program-generated IDs
+  user.save().then(() => {
+    return user.generateAuthToken();
+  }).then((token) => {
+    //   var shortenedUser = user.toJSON();
+    res.header('x-auth', token).send(user);
+  }).catch((e) => {
+    res.status(400).send(e);
+  })
+});
 
-    //create new user
-    var user = new User(body);
+app.post('/users/login', (req, res) => {
+    //pick email and pw to display
+    var body = _.pick(req.body, ['email', 'password']);
 
-    //save new user (made from req.body onto db
-    user.save().then( () => {
-        // if(!result){
-        //     return res.status(404).send({err: 'did not post. no result returned'});
-        // }
-        // return res.status(200).send({user: result})
+    // var user = new User(body);
 
-        return user.generateAuthToken();
-    }).then( (token) => {
-        res.header('x-auth', token).status(200).send({user: user});  //create custom  header to store teh value
-    }).catch( (err)=> {
-        return res.status(400).send({err: err})
-    })
+    //compare if username is same as one in DB and hash the pw provided to compare with pw in the database. If it is the same, then return user.generateAuthToken(). return response header x-auth token and send body
+    var hashedPw;
+    //hash pw
+    bcrypt.genSalt(10, (err, salt) => { //# of rounds to generate salt (more takes longer but less chance of brute force), 2nd arg is callback
+        bcrypt.hash(req.password, salt, (err, hash) => {
+            hashedPw = hash;
+        });
+        
+    } );  
+
+    //get pw in database
+
+    User.findOne({email: req.email}).then( (user) => {
+        var dbHashedPassword = user.password;
+
+        //compare both pw
+        bcrypt.compare(dbHashedPassword, hashedPassword, (err, result) =>{
+            if(!result){
+                return res.status(400).send({error: 'not a match'});
+            }
+            // if(err){
+            //     return new Promise.reject();
+            // }
+            var token = user.generateAuthToken();
+            res.header('x-auth', token);
+            res.status(200).send(body);
+        });
+
+    }).catch( (e)=> res.send({error: 'that email doesnt match an email in our system'}) );
+
+    
 
 })
-    
+
 
 //make private route
 app.get('/users/me', authenticate, (req, res) => {

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 var UserSchema = new mongoose.Schema({
     email: {
@@ -36,13 +37,13 @@ UserSchema.methods.toJSON = function(){  //what happens when mongo is converted 
     var user = this;
     var userObject = user.toObject(); // taking mongoose user and converting it to regular object
 
-    return _.pick(userObject, ['_id', 'email']); //only return id and email of this userObject
+    return _.pick(userObject, ['_id', 'email', 'password']); //only return id and email of this userObject
 };
 
-UserSchema.methods.generateAuthToken = function(){  //usees this type of function b/c it binds to this keyword
+UserSchema.methods.generateAuthToken = function(){  //usees this type of function b/c it binds to this keyword. this is specific to a particular user.
     var user = this;
     var access = 'auth';
-    var token = JWT.sign({_id: user._id.toHexString(), access}, 'abc123').toString();
+    var token = jwt.sign({_id: user._id.toHexString(), access}, 'abc123').toString();
 
     user.tokens.push({
         access: access,
@@ -54,7 +55,7 @@ UserSchema.methods.generateAuthToken = function(){  //usees this type of functio
     })
 };
 
-//statics holds model methods
+//statics holds model methods. This searches across all the users to verify one.
 UserSchema.statics.findByToken = function (token) {
     var User = this;  //this is model unlike other method which is instance method
     var decoded;
@@ -65,7 +66,7 @@ UserSchema.statics.findByToken = function (token) {
         // return new Promise( (resolve, reject)=> {
         //     reject();
         // })
-        return Promise.reject();
+        return Promise.reject();  //everything below will never fire
     }
 
     return User.findOne({
@@ -74,6 +75,24 @@ UserSchema.statics.findByToken = function (token) {
         'tokens.access': 'auth'
     })
 };
+
+UserSchema.pre('save', function(next) {  //middleware. next() must be called at end or else program will crash. executes this function BEFORE it saeves to db. Mongo middleware allows us to run before or after we update database
+    var user = this;
+
+    if(user.isModified('password')){ //returns true if this document was modified. Want to encrypt password only if it was just modified. Don't want to hash your hash.
+
+        bcrypt.genSalt(10, (err, salt) => { //# of rounds to generate salt (more takes longer but less chance of brute force), 2nd arg is callback
+            bcrypt.hash(user.password, salt, (err, hash) => {
+                user.password = hash; //previously user.password was a plain text pw adn override this with hashed version
+                 next();
+            });
+        } ); 
+       
+    } else{
+        next();
+    }   
+
+})
 
 var User = mongoose.model('User', UserSchema);
 
