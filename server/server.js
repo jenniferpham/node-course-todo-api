@@ -28,9 +28,12 @@ const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json()); //middleware we give to express
 
-app.post('/todos', (request, response) => {
+
+//post. Pass in Token to find User. Set _creator property to user._id. Then save.
+app.post('/todos', authenticate, (request, response) => { //authenticate middleware
     var todo = new Todo({
-        text: request.body.text
+        text: request.body.text,
+        _creator: request.user._id
     });
 
     todo.save().then( (doc) => {  //setup sending response so it shows up in postman
@@ -40,15 +43,18 @@ app.post('/todos', (request, response) => {
     })
 })
 
-app.get('/todos', (req, res) => {
-    Todo.find().then( (todos) => {
+app.get('/todos', authenticate, (req, res) => {
+    Todo.find({
+        _creator: req.user._id //find all todos made by that creator
+    }).then( (todos) => {
         res.send({todos}) //seding object is much more flexible
     }, (e) => {
         res.status(400).send(e)
     })
 })
 
-app.get('/todos/:id', (req, res)=>{
+//get specific id and use authenticate to make sure it is a todo by the user that iloggged in
+app.get('/todos/:id', authenticate, (req, res)=>{
     var id = req.params.id;
     //check if id is valid using isValid method. if not, give 404 and send back empty body
     //findById
@@ -61,7 +67,10 @@ app.get('/todos/:id', (req, res)=>{
         return res.status(404).send({});
     }
 
-    Todo.findById(id).then( (result)=> {
+    Todo.findOne({
+        _id: id,
+        _creator: req.user._id
+    }).then( (result)=> {
         if(!result){ //it is a valid id but just not in our collection
             res.status(404).send({})
         }
@@ -71,7 +80,7 @@ app.get('/todos/:id', (req, res)=>{
     })
 })
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
     //get the id
 
     //validate the id --> not valid? return 404. (it will still be successful if it doesn't remove but it just returns a null response)
@@ -88,7 +97,10 @@ app.delete('/todos/:id', (req, res) => {
         return res.status(404).send({});
     }
 
-    Todo.findOneAndRemove({_id: id}).then( (result)=> {
+    Todo.findOneAndRemove({
+        _id: id, 
+        _creator: req.user._id}
+    ).then( (result)=> {
         if(!result){
             return res.status(404).send({})
         } else{
@@ -98,7 +110,7 @@ app.delete('/todos/:id', (req, res) => {
     }).catch( (err) => res.status(400).send({error: err})  )
 })
 
-app.patch('/todos/:id', (req, res)=> {
+app.patch('/todos/:id', authenticate, (req, res)=> {
     var id = req.params.id;
     var body = _.pick(req.body, ['text', 'completed']); //select which properties users can update/edit. don't want them updating program-generated IDs
 
@@ -113,14 +125,27 @@ app.patch('/todos/:id', (req, res)=> {
         body.completedAt = null;
     }
 
-    Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then( (result)=> {
-        if(!result){
-            return res.status(404).send({error: 'dont see this id'})
+    Todo.findOneAndUpdate({
+        _id: id,
+        _creator: req.user._id
+    }, {$set: body}, {new: true} ).then( (todo)=>{
+        if(!todo){
+            return Promise.reject();
         }
-        return res.status(200).send({todo: result})
-    }).catch( (err) => {
-        return res.status(400).send({err: err})
-    });
+        return res.status(200).send({todo})
+    })
+    .catch( (e) => {
+        return res.status(400).send({error: e})
+    })
+
+    // Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then( (result)=> {
+    //     if(!result){
+    //         return res.status(404).send({error: 'dont see this id'})
+    //     }
+    //     return res.status(200).send({todo: result})
+    // }).catch( (err) => {
+    //     return res.status(400).send({err: err})
+    // });
 });
 
 //POST Users - use pick for what they can edit
