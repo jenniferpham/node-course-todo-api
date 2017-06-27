@@ -5,8 +5,8 @@ const bcrypt = require('bcryptjs');
 var password = '123abc!';
 
 //hash and salt password before they are saved
-
-bcrypt.genSalt(10, (err, salt) => { //# of rounds to generate salt (more takes longer but less chance of brute force), 2nd arg is callback
+//this way no one can generate a lookup table. if you enter in a pw, its different everytime with the salt
+bcrypt.genSalt(10, (err, salt) => { //# of rounds to generate salt (more takes longer but less chance of brute force b/c you need time to run a bunch of posts), 2nd arg is callback
     bcrypt.hash(password, salt, (err, hash) => {
         // console.log(hash);
     });

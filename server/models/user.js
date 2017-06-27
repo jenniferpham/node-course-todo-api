@@ -79,12 +79,12 @@ UserSchema.statics.findByToken = function (token) {
 UserSchema.pre('save', function(next) {  //middleware. next() must be called at end or else program will crash. executes this function BEFORE it saeves to db. Mongo middleware allows us to run before or after we update database
     var user = this;
 
-    if(user.isModified('password')){ //returns true if this document was modified. Want to encrypt password only if it was just modified. Don't want to hash your hash.
+    if(user.isModified('password')){ //returns true if this document was modified. Want to encrypt password only if it was JUST modified. Don't want to hash your hash.
 
         bcrypt.genSalt(10, (err, salt) => { //# of rounds to generate salt (more takes longer but less chance of brute force), 2nd arg is callback
             bcrypt.hash(user.password, salt, (err, hash) => {
                 user.password = hash; //previously user.password was a plain text pw adn override this with hashed version
-                 next();
+                 next(); //must be called or else your program will break
             });
         } ); 
        
