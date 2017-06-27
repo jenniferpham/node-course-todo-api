@@ -162,46 +162,33 @@ app.post('/users', (req, res) => {
   })
 });
 
+//Trying to get a new token
 app.post('/users/login', (req, res) => {
     //pick email and pw to display
     var body = _.pick(req.body, ['email', 'password']);
 
-    // var user = new User(body);
-
-    //compare if username is same as one in DB and hash the pw provided to compare with pw in the database. If it is the same, then return user.generateAuthToken(). return response header x-auth token and send body
-    var hashedPw;
-    //hash pw
-    bcrypt.genSalt(10, (err, salt) => { //# of rounds to generate salt (more takes longer but less chance of brute force), 2nd arg is callback
-        bcrypt.hash(req.password, salt, (err, hash) => {
-            hashedPw = hash;
-        });
-        
-    } );  
-
-    //get pw in database
-
-    User.findOne({email: req.email}).then( (user) => {
-        var dbHashedPassword = user.password;
-
-        //compare both pw
-        bcrypt.compare(dbHashedPassword, hashedPassword, (err, result) =>{
-            if(!result){
-                return res.status(400).send({error: 'not a match'});
-            }
-            // if(err){
-            //     return new Promise.reject();
-            // }
-            var token = user.generateAuthToken();
-            res.header('x-auth', token);
-            res.status(200).send(body);
-        });
-
-    }).catch( (e)=> res.send({error: 'that email doesnt match an email in our system'}) );
-
-    
-
+//pass in email and password and get user back
+    User.findByCredentials(body.email, body.password).then( (user) => {
+        //take in user if email and password match, and output token
+        return user.generateAuthToken().then((token)=>{
+            res.header('x-auth', token).status(200).send(user);
+        })
+    }).catch( (e)=> {
+        res.status(400).send({error: 'cannot login'})
+    })
 })
 
+//LOGOUT - delete token out of tokens array
+//private. use authenticate middleware
+//req.header['x-auth'] gives the token in "authenticate" middleware
+app.delete('/users/me/token', authenticate, (req, res) => {
+    //ideally it will return a promise because we will have to respond to the user once token is deleted
+    req.user.removeToken(req.token).then( ()=>{
+        res.status(200).send();
+    }, () => {
+        res.status(400).send({});
+    });
+});
 
 //make private route
 app.get('/users/me', authenticate, (req, res) => {

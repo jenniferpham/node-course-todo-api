@@ -33,11 +33,24 @@ var UserSchema = new mongoose.Schema({
     }]
 });
 
+//instance method
+UserSchema.methods.removeToken = function(token){
+    var user = this;
+
+    return user.update({
+        $pull: {  //remove object from array that matches whatever is true
+            tokens: {
+                token: token
+            }
+        }
+    });
+}
+
 UserSchema.methods.toJSON = function(){  //what happens when mongo is converted to json value
     var user = this;
     var userObject = user.toObject(); // taking mongoose user and converting it to regular object
 
-    return _.pick(userObject, ['_id', 'email', 'password']); //only return id and email of this userObject
+    return _.pick(userObject, ['_id', 'email']); //only return id and email of this userObject
 };
 
 UserSchema.methods.generateAuthToken = function(){  //usees this type of function b/c it binds to this keyword. this is specific to a particular user.
@@ -55,6 +68,32 @@ UserSchema.methods.generateAuthToken = function(){  //usees this type of functio
     })
 };
 
+//model method. not specific to a particular user. must search across all users
+UserSchema.statics.findByCredentials = function(email, password) { //pass email and pw and get user back
+    var User = this;
+
+    return User.findOne({email: email}).then( (user)=>{
+        if(!user){ //if user doesnt exist
+            return Promise.reject();
+        }
+        return new Promise((resolve, reject) => {
+            //use bcrypt to compare password and user.password
+
+            bcrypt.compare(password, user.password, (err, res) =>{
+                if(res){  //if they are the same and result is true
+                    resolve(user);
+                } else{
+                    reject();
+                }
+            });
+
+        });
+        
+    }).catch( (e) => {
+        return Promise.reject();
+    });
+
+}
 //statics holds model methods. This searches across all the users to verify one.
 UserSchema.statics.findByToken = function (token) {
     var User = this;  //this is model unlike other method which is instance method
