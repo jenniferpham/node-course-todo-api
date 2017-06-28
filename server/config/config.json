@@ -1,0 +1,14 @@
+{
+    "test": {
+        "PORT": 3000,
+        "MONGODB_URI":  "mongodb://localhost:27017/TodoAppTest",
+        "JWT_SECRET" : "qwertyuiop"
+    },
+    "dev": {
+        "PORT": 3000,
+        "MONGODB_URI":  "mongodb://localhost:27017/TodoApp",
+        "JWT_SECRET" : "qwertyuiopqw"
+    }
+}
+//[protocol mongodb://][username heroku_nc4g7f01]:[password maek3e4jtfh5augrvoct4sn2k5]@[address ds133922.mlab.com]:[port 33922]/[database heroku_nc4g7f01]
+//mongodb://heroku_nc4g7f01:maek3e4jtfh5augrvoct4sn2k5@ds133922.mlab.com:33922/heroku_nc4g7f01
