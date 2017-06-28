@@ -1,14 +1,4 @@
-//DIFFERENT ENVIRONMENTS
-var env = process.env.NODE_ENV || 'dev';  //heroku will automatically set process.env.node_env to "production". if it doesn't exist, it will be dev
-console.log('env ****', env);
-
-if(env === 'dev'){
-    process.env.PORT = 3000;
-    process.env.MONGODB_URI = 'mongodb://localhost:27017/TodoApp';
-} else if(env === 'test'){
-    process.env.PORT = 3000;
-    process.env.MONGODB_URI = 'mongodb://localhost:27017/TodoAppTest';
-}
+require('./config/config');
 
 //EXTERNAL
 const _ = require('lodash');
